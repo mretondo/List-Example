@@ -1,6 +1,7 @@
 import UIKit
 
 class ThemeChooserListViewController: UICollectionViewController {
+
     private typealias DataSource = UICollectionViewDiffableDataSource<Sections, Theme>
     private typealias Snapshot = NSDiffableDataSourceSnapshot<Sections, Theme>
 
@@ -10,13 +11,20 @@ class ThemeChooserListViewController: UICollectionViewController {
 
     private var dataSource: DataSource!
 
+    private var modelThemes: [Theme] = []
+
     override func viewDidLoad() {
         super.viewDidLoad()
-        
+
+        // remove Faces for testing
+        modelThemes = Theme.sampleThemes
+        modelThemes.remove(at: 2)
+
         collectionView.collectionViewLayout = listLayout()
         
         dataSource = makeDataSource()
-        applySnapshot(to: dataSource, animatingDifferences: false)
+
+        updateUI()
 
         collectionView.dataSource = dataSource
     }
@@ -28,38 +36,62 @@ class ThemeChooserListViewController: UICollectionViewController {
         return UICollectionViewCompositionalLayout.list(using: listConfiguration)
     }
 
-    private func applySnapshot(to dataSource: DataSource, animatingDifferences: Bool = true) {
+    private func updateUI(animatingDifferences: Bool = true) {
+        // perform query
+        modelThemes.sort { $0.title < $1.title }
+
         var snapshot = Snapshot()
         snapshot.appendSections(Sections.allCases)
-        snapshot.appendItems(Theme.sampleThemes)
+        snapshot.appendItems(modelThemes, toSection: .first)
         dataSource.apply(snapshot, animatingDifferences: animatingDifferences)
     }
 
-    private func ThemeCellRegistration() -> UICollectionView.CellRegistration<UICollectionViewListCell, Theme> {
-        return UICollectionView.CellRegistration { (cell: UICollectionViewListCell, indexPath: IndexPath, itemIdentifier: Theme) in
-//            let theme = Theme.sampleThemes[indexPath.item]
+    private func makeDataSource() -> DataSource {
+        let themeCellRegistration = ThemeCellRegistration()
 
+        let datasource = DataSource(collectionView: collectionView) { (collectionView: UICollectionView, indexPath: IndexPath, theme: Theme) in
+            let themeCell = collectionView.dequeueConfiguredReusableCell(using: themeCellRegistration, for: indexPath, item: theme)
+            return themeCell
+        }
+        
+        return datasource
+    }
+
+    private func ThemeCellRegistration() -> UICollectionView.CellRegistration<UICollectionViewListCell, Theme> {
+        return UICollectionView.CellRegistration { (cell: UICollectionViewListCell, indexPath: IndexPath, theme: Theme) in
             var content = cell.defaultContentConfiguration()
 
             // increase 'text' default font size
             let fontSize = 44.0
             content.textProperties.font = content.textProperties.font.withSize(fontSize)
-//            content.text = theme.title
-            content.text = itemIdentifier.title
+            content.text = theme.title
 
-//            let emoji = pickRandomEmoji(from: theme.emojis)
-            let emoji = pickRandomEmoji(from: itemIdentifier.emojis)
+            let emoji = pickRandomEmoji(from: theme.emojis)
             content.image = emoji.textToImage(withSize: fontSize)
 
             cell.contentConfiguration = content
         }
     }
 
-    private func makeDataSource() -> DataSource {
-        let registration = ThemeCellRegistration()
-        return DataSource(collectionView: collectionView) { (collectionView: UICollectionView, indexPath: IndexPath, itemIdentifier: Theme) in
-            return collectionView.dequeueConfiguredReusableCell(using: registration, for: indexPath, item: itemIdentifier)
-        }
+    override func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+//        guard let theme = dataSource.itemIdentifier(for: indexPath) else {
+//            collectionView.deselectItem(at: indexPath, animated: true)
+//            return
+//        }
+
+        collectionView.deselectItem(at: indexPath, animated: true)
+
+        modelThemes.remove(at: indexPath.item)
+
+        let facesTheme = Theme(title: "Faces", emojis: "😃🤣😍🤢🤪🤓😬🙄😡😎🥶🤥😇🤠🤮🙁😤😫🥳😁😮🤐😳😅🥺", backgroundColor: #colorLiteral(red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0), faceDownColor: #colorLiteral(red: 0.01680417731, green: 0.1983509958, blue: 1, alpha: 1), faceUpColor: #colorLiteral(red: 0.8039215803, green: 0.8039215803, blue: 0.8039215803, alpha: 1))
+        modelThemes.append(facesTheme)
+
+        updateUI()
+        
+//        let alert = UIAlertController(title: theme.title, message: "", preferredStyle: .alert)
+//        let okAction = UIAlertAction(title: "OK", style: .default) {_ in collectionView.deselectItem(at: indexPath, animated: true)}
+//        alert.addAction(okAction)
+//        present(alert, animated: true, completion: nil)
     }
 }
 
